@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Очередь фаст-трека</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=Unbounded:wght@500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: single reading column; two full-width charts, each in its own horizontal scroller on phones. */
+:root {
+  --bg: #f6f5f1; --surface: #ffffff; --fg: #1f2421; --muted: #6b716c; --line: #dcdcd3;
+  --wait: #b8693a;      /* copper: submission -> interview */
+  --review: #4f7a5a;    /* olive: interview -> decision */
+  --mail: #c9b78f;      /* sand: letter in the post */
+  --pending: #b8693a;
+  --font-display: "Unbounded", "Golos Text", system-ui, sans-serif;
+  --font-body: "Golos Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #161917; --surface: #1e2220; --fg: #e9ebe6; --muted: #9aa19b; --line: #333a36;
+  --wait: #d98a57; --review: #7fb08a; --mail: #8f8466; --pending: #d98a57; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #161917; --surface: #1e2220; --fg: #e9ebe6; --muted: #9aa19b; --line: #333a36;
+  --wait: #d98a57; --review: #7fb08a; --mail: #8f8466; --pending: #d98a57; color-scheme: dark }
+
+body { background: var(--bg); color: var(--fg); font: 15px/1.55 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+main { max-width: 1040px; margin: 0 auto; padding-block: 40px 64px; display: grid; gap: 40px; }
+h1 { font: 700 clamp(26px, 4vw, 38px)/1.15 var(--font-display); margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+h2 { font: 500 19px/1.3 var(--font-display); margin: 0 0 6px; text-wrap: balance; }
+.lead { max-width: 64ch; color: var(--muted); margin: 12px 0 0; }
+.lead b { color: var(--fg); font-weight: 600; }
+section > p { max-width: 68ch; margin: 0 0 14px; color: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 13px; color: var(--muted); margin-bottom: 12px; }
+.legend span { display: inline-flex; align-items: center; gap: 8px; }
+.sw { width: 22px; height: 10px; border-radius: 2px; display: inline-block; }
+.scroller { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 8px; }
+svg { display: block; font-family: var(--font-body); }
+svg text { fill: var(--fg); }
+svg .muted { fill: var(--muted); }
+svg .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.findings { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.finding { border-top: 3px solid var(--line); padding-top: 10px; min-width: 0; }
+.finding.hot { border-top-color: var(--wait); }
+.finding .num { font: 700 28px/1.1 var(--font-display); font-variant-numeric: tabular-nums; }
+.finding p { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+.foot { font-size: 13px; color: var(--muted); max-width: 72ch; }
+</style>
+
+</head>
+<body>
+<main>
+  <header>
+    <h1>Сколько ждут гражданство по фаст-треку</h1>
+    <p class="lead">По сообщениям чата «Ксеномалакес» с ноября 2024 по 23 ноября 2026: <b>31 заявка по фаст-треку</b> (20 от участников, 11 от знакомых и из пересланных постов). Основная часть ожидания приходится на этап до интервью. Для подач с осени 2025 он растянулся почти до года.</p>
+  </header>
+
+  <div class="findings">
+    <div class="finding hot"><div class="num">~11 мес</div><p>от подачи до интервью для подач конца октября и ноября 2025. Год назад это занимало около 5-6 месяцев.</p></div>
+    <div class="finding"><div class="num">1-2.5 мес</div><p>от интервью до решения. Этот срок почти не меняется.</p></div>
+    <div class="finding"><div class="num">4 из 18</div><p>писем с решением потерялись на почте.</p></div>
+  </div>
+
+  <section>
+    <h2>Путь каждой заявки</h2>
+    <p>Каждая строка — одна заявка, подписана датой подачи. Отрезки показывают ожидание интервью, рассмотрение после интервью и доставку письма. Пунктир — заявки, которые ещё ждут решения.</p>
+    <div class="legend">
+      <span><i class="sw" style="background:var(--wait)"></i>подача → интервью</span>
+      <span><i class="sw" style="background:var(--review)"></i>интервью → решение</span>
+      <span><i class="sw" style="background:var(--mail)"></i>письмо в пути</span>
+      <span><i class="sw" style="background:repeating-linear-gradient(90deg,var(--pending) 0 5px,transparent 5px 9px)"></i>ждёт решения</span>
+    </div>
+    <div class="scroller"><svg id="gantt" role="img" aria-label="Таймлайн заявок на гражданство по фаст-треку"></svg></div>
+  </section>
+
+  <section>
+    <h2>Срок до интервью по дате подачи</h2>
+    <p>Каждая точка — заявка: по горизонтали дата подачи, по вертикали сколько месяцев ждали интервью. Подачи до лета 2025 укладываются в 3-7 месяцев, ноябрьские уходят к 11-12.</p>
+    <div class="scroller"><svg id="scatter" role="img" aria-label="Месяцев до интервью в зависимости от даты подачи"></svg></div>
+  </section>
+
+  <p class="foot">Даты взяты из сообщений участников. Где дата не названа прямо, она выведена из даты сообщения, а при известном только месяце берётся его середина. Решение — дата, указанная в письме. Если её не называли, отрезок «интервью → решение» доведён до получения письма. Заявки, которых ещё не позвали на интервью, на графиках не видны, поэтому для поздних подач реальный срок ещё больше.</p>
+</main>
+
+<script>
+// [name (removed), member?, submitted, interview, decision (date in letter), letter received]
+const DATA = [
+  ["", 0, "2024-08-12", "2024-11-11"],
+  ["", 1, "2024-10-11", "2025-02-25", "2025-05-05", "2025-05-16"],
+  ["", 0, "2024-10-15", "2025-02-25", null, "2025-05-12"],
+  ["", 1, "2024-11-01", "2025-05-08", "2025-07-02", "2025-07-21"],
+  ["", 0, "2024-11-19", null, "2025-11-20", "2025-12-08"],
+  ["", 0, "2024-12-12", "2025-06-18"],
+  ["", 1, "2024-12-17", "2025-06-16", null, "2025-08-08"],
+  ["", 1, "2024-12-22", "2025-06-17", null, "2025-09-26"],
+  ["", 0, "2024-12-23", "2025-07-11", null, "2025-09-26"],
+  ["", 1, "2025-01-07", "2025-07-09", "2025-08-04", "2025-08-22"],
+  ["", 0, "2025-02-15", "2025-10-05"],
+  ["", 1, "2025-02-27", "2025-07-16", null, "2026-01-08"],
+  ["", 1, "2025-04-10", "2025-10-15", "2025-12-10", "2026-01-08"],
+  ["", 1, "2025-04-11", "2025-08-26", "2025-10-07", "2025-10-23"],
+  ["", 0, "2025-04-17", "2025-08-27", "2025-10-08", "2025-10-20"],
+  ["", 1, "2025-04-29", "2025-09-16", "2025-10-21", "2025-10-23"],
+  ["", 1, "2025-05-07", "2025-09-24", "2025-10-21", "2025-11-05"],
+  ["", 0, "2025-05-13", "2025-10-21", "2025-12-10", "2026-01-07"],
+  ["", 0, "2025-05-25", "2025-11-11", "2026-02-13", "2026-03-07"],
+  ["", 0, "2025-07-25", "2025-12-09"],
+  ["", 0, "2025-08-07", "2026-01-13", "2026-02-19", "2026-03-03"],
+  ["", 1, "2025-08-07", "2026-01-14", "2026-03-16", "2026-03-31"],
+  ["", 1, "2025-08-08", "2026-02-10", "2026-04-23", "2026-04-30"],
+  ["", 1, "2025-08-14", "2026-02-10", "2026-04-23", "2026-06-02"],
+  ["", 1, "2025-08-14", "2026-01-15", "2026-04-09", "2026-07-20"],
+  ["", 1, "2025-08-22", "2026-02-16", "2026-04-23", "2026-05-05"],
+  ["", 1, "2025-09-10", "2026-03-18", "2026-04-23", "2026-05-05"],
+  ["", 1, "2025-10-21", "2026-07-29"],
+  ["", 1, "2025-11-05", "2026-10-06"],
+  ["", 1, "2025-11-05", "2026-10-05", "2026-11-13"],
+  ["", 1, "2025-11-20", "2026-11-06"],
+];
+const TODAY = "2026-11-23";
+const NS = "http://www.w3.org/2000/svg";
+const d = s => s ? new Date(s + "T00:00:00Z") : null;
+const MONTHS = ["янв","фев","мар","апр","май","июн","июл","авг","сен","окт","ноя","дек"];
+const el = (tag, attrs, parent, text) => {
+  const n = document.createElementNS(NS, tag);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  if (text != null) n.textContent = text;
+  parent.appendChild(n); return n;
+};
+const fmt = s => s.split("-").reverse().join(".");
+const months = (a, b) => (d(b) - d(a)) / 86400000 / 30.44;
+
+function gantt() {
+  const svg = document.getElementById("gantt");
+  // Only interviews from mid-2026 can still be waiting; older rows without an outcome are just unknown.
+  const rows = DATA.filter(r => r[4] || r[5] || (r[3] && r[3] >= "2026-07-01"));
+  const W = 980, L = 92, R = 16, T = 28, row = 22, H = T + rows.length * row + 10;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("width", W); svg.setAttribute("height", H);
+  const x0 = d("2024-08-01"), x1 = d("2026-12-31");
+  const x = s => L + (d(s) - x0) / (x1 - x0) * (W - L - R);
+  for (let y = 2024, m = 7; y < 2027; m++) {
+    if (m > 11) { m = 0; y++; } if (y > 2026) break;
+    const iso = `${y}-${String(m + 1).padStart(2, "0")}-01`, X = x(iso);
+    el("line", { x1: X, x2: X, y1: T - 6, y2: H - 6, stroke: "var(--line)", "stroke-width": m === 0 ? 1.2 : 0.6 }, svg);
+    if (m % 3 === 0) el("text", { x: X + 3, y: 14, "font-size": 11, class: m === 0 ? "" : "muted" }, svg, m === 0 ? String(y) : MONTHS[m]);
+  }
+  const tx = x(TODAY);
+  el("line", { x1: tx, x2: tx, y1: T - 10, y2: H - 6, stroke: "var(--fg)", "stroke-width": 1, "stroke-dasharray": "2 3" }, svg);
+  el("text", { x: tx - 4, y: 24, "font-size": 11, "text-anchor": "end", class: "muted" }, svg, "сегодня");
+
+  rows.forEach(([, , sub, intv, dec, rec], i) => {
+    const y = T + i * row + 4, h = 12;
+    const g = el("g", {}, svg);
+    el("title", {}, g, `Подача ${fmt(sub)}` + (intv ? `, интервью ${fmt(intv)}` : "") + (dec ? `, решение ${fmt(dec)}` : "") + (rec ? `, письмо получено ${fmt(rec)}` : ""));
+    el("text", { x: L - 8, y: y + 10, "font-size": 12, "text-anchor": "end", class: "muted mono" }, g, fmt(sub));
+    const bar = (a, b, fill, extra = {}) => el("rect", { x: x(a), y, width: Math.max(2, x(b) - x(a)), height: h, rx: 2, fill, ...extra }, g);
+    const reviewEnd = dec || rec;
+    if (intv) bar(sub, intv, "var(--wait)");
+    else bar(sub, reviewEnd, "var(--muted)", { opacity: 0.35 });
+    if (intv && reviewEnd) bar(intv, reviewEnd, "var(--review)");
+    if (dec && rec) bar(dec, rec, "var(--mail)");
+    if (intv && !reviewEnd) el("line", { x1: x(intv), x2: tx, y1: y + h / 2, y2: y + h / 2, stroke: "var(--pending)", "stroke-width": 3, "stroke-dasharray": "5 4" }, g);
+    if (intv && dec && !rec) el("circle", { cx: x(dec), cy: y + h / 2, r: 4, fill: "var(--review)" }, g);
+  });
+}
+
+function scatter() {
+  const svg = document.getElementById("scatter");
+  const W = 980, H = 340, L = 48, R = 16, T = 16, B = 40;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("width", W); svg.setAttribute("height", H);
+  const x0 = d("2024-08-01"), x1 = d("2025-12-01"), yMax = 13;
+  const x = s => L + (d(s) - x0) / (x1 - x0) * (W - L - R);
+  const y = v => T + (1 - v / yMax) * (H - T - B);
+  for (let v = 0; v <= 12; v += 3) {
+    el("line", { x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: "var(--line)", "stroke-width": 0.8 }, svg);
+    el("text", { x: L - 8, y: y(v) + 4, "font-size": 11, "text-anchor": "end", class: "muted mono" }, svg, v);
+  }
+  el("text", { x: L, y: T - 4, "font-size": 11, class: "muted" }, svg, "мес. до интервью");
+  for (let yy = 2024, m = 7; ; m += 2) {
+    if (m > 11) { m -= 12; yy++; }
+    const iso = `${yy}-${String(m + 1).padStart(2, "0")}-01`; if (d(iso) > x1) break;
+    el("text", { x: x(iso), y: H - B + 18, "font-size": 11, "text-anchor": "middle", class: "muted" }, svg, `${MONTHS[m]} ${String(yy).slice(2)}`);
+  }
+  el("text", { x: W - R, y: H - 6, "font-size": 11, "text-anchor": "end", class: "muted" }, svg, "дата подачи");
+  DATA.filter(r => r[3]).forEach(([, member, sub, intv]) => {
+    const v = months(sub, intv);
+    const c = el("circle", { cx: x(sub), cy: y(v), r: 6, fill: member ? "var(--wait)" : "var(--surface)", stroke: "var(--wait)", "stroke-width": 2 }, svg);
+    el("title", {}, c, `Подача ${fmt(sub)}, интервью ${fmt(intv)} (${v.toFixed(1)} мес.)`);
+  });
+  const lx = W - R - 200;
+  el("circle", { cx: lx, cy: T + 8, r: 5, fill: "var(--wait)" }, svg);
+  el("text", { x: lx + 10, y: T + 12, "font-size": 12 }, svg, "участник чата");
+  el("circle", { cx: lx + 110, cy: T + 8, r: 5, fill: "var(--surface)", stroke: "var(--wait)", "stroke-width": 2 }, svg);
+  el("text", { x: lx + 120, y: T + 12, "font-size": 12 }, svg, "знакомые");
+}
+
+gantt(); scatter();
+</script>
+
+</body>
+</html>
